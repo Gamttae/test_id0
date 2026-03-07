@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Digital ID Card</title>
+  <title>ENDFIELD ID — Digital Identity</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,14 +13,20 @@
   <!-- Desktop / Tablet Overlay -->
   <div id="desktop-overlay">
     <div class="overlay-content">
-      <div class="overlay-icon">⚠</div>
-      <h2>스마트폰으로 봐주세요</h2>
-      <p>이 콘텐츠는 모바일 세로 모드에 최적화되어 있습니다.</p>
+      <div class="overlay-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="4" y="4" width="32" height="32" rx="2" stroke="#d4a853" stroke-width="1.5" fill="none"/>
+          <line x1="20" y1="12" x2="20" y2="24" stroke="#d4a853" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="28" r="1.5" fill="#d4a853"/>
+        </svg>
+      </div>
+      <h2>모바일 환경에서 열어주세요</h2>
+      <p>이 콘텐츠는 스마트폰 세로 화면에<br>최적화되어 있습니다.</p>
       <div class="overlay-device-icon">
-        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
-          <rect x="2" y="2" width="44" height="76" rx="8" stroke="#fff" stroke-width="2" fill="none"/>
-          <circle cx="24" cy="70" r="4" stroke="#fff" stroke-width="1.5" fill="none"/>
-          <line x1="16" y1="8" x2="32" y2="8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        <svg width="36" height="64" viewBox="0 0 36 64" fill="none">
+          <rect x="2" y="2" width="32" height="60" rx="6" stroke="rgba(212,168,83,0.5)" stroke-width="1" fill="none"/>
+          <line x1="12" y1="6" x2="24" y2="6" stroke="rgba(212,168,83,0.4)" stroke-width="1" stroke-linecap="round"/>
+          <circle cx="18" cy="56" r="3" stroke="rgba(212,168,83,0.4)" stroke-width="1" fill="none"/>
         </svg>
       </div>
     </div>
@@ -33,11 +39,9 @@
         <span class="terminal-dot"></span>
         <span class="terminal-dot"></span>
         <span class="terminal-dot"></span>
-        <span class="terminal-title">sys://init_idcard.sh</span>
+        <span class="terminal-title">endfield://sys_init.sh</span>
       </div>
-      <div class="terminal-body" id="terminal-body">
-        <!-- Lines will be appended by JS -->
-      </div>
+      <div class="terminal-body" id="terminal-body"></div>
       <div class="progress-container">
         <span id="progress-bar">[----------] 0%</span>
       </div>
@@ -46,70 +50,85 @@
 
   <!-- Main Scene -->
   <div id="scene">
-    <!-- Background Canvas for particles -->
     <canvas id="bg-canvas"></canvas>
-
-    <!-- CSS Grid overlay -->
     <div id="grid-overlay"></div>
+
+    <!-- Ambient light rays -->
+    <div class="ambient-ray ray-1"></div>
+    <div class="ambient-ray ray-2"></div>
 
     <!-- HUD Elements -->
     <div class="hud hud-top-left">
-      <span>SYS::ONLINE</span>
+      <span class="hud-tag">SYS</span>
+      <span>ONLINE</span>
       <span class="hud-blink">●</span>
     </div>
     <div class="hud hud-top-right">
       <span id="hud-time">00:00:00</span>
     </div>
     <div class="hud hud-bottom-left">
-      <span>ID_VERIFY v3.7.1</span>
+      <span class="hud-tag">ENDFIELD</span>
+      <span>ID v3.7</span>
     </div>
     <div class="hud hud-bottom-right">
-      <span>FLIP: <span id="hud-flip-count">0</span></span>
+      <span>FLIP <span id="hud-flip-count">0</span></span>
     </div>
 
     <!-- 3D Card Container -->
     <div id="card-container">
       <div id="card">
-        <!-- Front Face -->
+        <!-- ===== Front Face ===== -->
         <div class="card-face card-front">
+          <div class="card-accent-top"></div>
           <div class="card-header">
-            <div class="card-badge">DIGITAL ID</div>
+            <div class="card-badge">OPERATOR ID</div>
             <div class="card-chip">
-              <svg width="36" height="28" viewBox="0 0 36 28">
-                <rect x="1" y="1" width="34" height="26" rx="4" fill="#c8a846" stroke="#a08020" stroke-width="1"/>
-                <line x1="1" y1="14" x2="35" y2="14" stroke="#a08020" stroke-width="0.5"/>
-                <line x1="18" y1="1" x2="18" y2="27" stroke="#a08020" stroke-width="0.5"/>
-                <line x1="8" y1="7" x2="28" y2="7" stroke="#a08020" stroke-width="0.5"/>
-                <line x1="8" y1="21" x2="28" y2="21" stroke="#a08020" stroke-width="0.5"/>
+              <svg width="32" height="24" viewBox="0 0 32 24">
+                <rect x="1" y="1" width="30" height="22" rx="3" fill="#c8a846" stroke="#9a7830" stroke-width="0.8"/>
+                <line x1="1" y1="12" x2="31" y2="12" stroke="#9a7830" stroke-width="0.4"/>
+                <line x1="16" y1="1" x2="16" y2="23" stroke="#9a7830" stroke-width="0.4"/>
               </svg>
             </div>
           </div>
-          <div class="card-photo-area">
-            <canvas id="photo-canvas" width="120" height="150"></canvas>
-            <div class="photo-scanline"></div>
+          <div class="card-body-front">
+            <div class="card-photo-area">
+              <canvas id="photo-canvas" width="110" height="140"></canvas>
+              <div class="photo-scanline"></div>
+              <div class="photo-corner tl"></div>
+              <div class="photo-corner tr"></div>
+              <div class="photo-corner bl"></div>
+              <div class="photo-corner br"></div>
+            </div>
+            <div class="card-info-front">
+              <div class="card-label">NAME</div>
+              <div class="card-name">홍길동</div>
+              <div class="card-label">DEPT</div>
+              <div class="card-department">컴퓨터공학과</div>
+              <div class="card-label">ABOUT</div>
+              <div class="card-about">끊임없이 배우고 성장하며,<br>기술로 세상을 연결하는<br>개발자를 꿈꿉니다.</div>
+            </div>
           </div>
-          <div class="card-info-front">
-            <div class="card-label">NAME</div>
-            <div class="card-name">홍길동</div>
-            <div class="card-label">DEPARTMENT</div>
-            <div class="card-department">컴퓨터공학과</div>
+          <div class="card-front-footer">
+            <div class="card-front-line"></div>
+            <span>SOGANG UNIV.</span>
           </div>
-          <div class="card-front-bottom-line"></div>
         </div>
 
-        <!-- Back Face -->
+        <!-- ===== Back Face ===== -->
         <div class="card-face card-back">
+          <div class="card-accent-top"></div>
           <div class="card-back-header">
             <div class="card-logo">
-              <svg width="60" height="60" viewBox="0 0 60 60">
-                <circle cx="30" cy="30" r="28" fill="none" stroke="#00e5ff" stroke-width="1.5"/>
-                <circle cx="30" cy="30" r="20" fill="none" stroke="#00e5ff" stroke-width="0.8"/>
-                <polygon points="30,10 38,25 30,20 22,25" fill="#00e5ff" opacity="0.8"/>
-                <polygon points="30,50 38,35 30,40 22,35" fill="#00e5ff" opacity="0.8"/>
-                <text x="30" y="33" text-anchor="middle" fill="#00e5ff" font-size="8" font-family="Rajdhani, sans-serif" font-weight="700">UNIV</text>
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="26" stroke="#d4a853" stroke-width="1.2"/>
+                <circle cx="28" cy="28" r="18" stroke="#d4a853" stroke-width="0.6" stroke-dasharray="3 2"/>
+                <line x1="28" y1="14" x2="28" y2="42" stroke="#d4a853" stroke-width="1.5"/>
+                <line x1="20" y1="22" x2="36" y2="22" stroke="#d4a853" stroke-width="1.5"/>
+                <text x="28" y="37" text-anchor="middle" fill="#d4a853" font-size="10" font-family="Rajdhani, sans-serif" font-weight="700">SG</text>
               </svg>
             </div>
-            <div class="card-back-title">STUDENT CREDENTIALS</div>
+            <div class="card-back-title">서강대학교</div>
+            <div class="card-back-subtitle">SOGANG UNIVERSITY</div>
           </div>
           <div class="card-info-back">
             <div class="info-row">
@@ -121,29 +140,37 @@
               <div class="card-value" id="user-id-display">██████████</div>
             </div>
             <div class="info-row">
-              <div class="card-label">ISSUED</div>
-              <div class="card-value">2026.03.01</div>
+              <div class="card-label">GOAL</div>
+              <div class="card-goal">재학 중 의미 있는 프로젝트를 완성하고,<br>팀워크와 문제 해결 능력을 길러<br>실력 있는 엔지니어로 성장하기.</div>
             </div>
             <div class="info-row">
               <div class="card-label">STATUS</div>
               <div class="card-value card-status-active">
-                <span class="status-dot"></span> ACTIVE
+                <span class="status-dot"></span> ENROLLED
               </div>
             </div>
           </div>
           <div class="card-barcode">
-            <canvas id="barcode-canvas" width="200" height="40"></canvas>
+            <canvas id="barcode-canvas" width="200" height="32"></canvas>
           </div>
           <div class="card-back-footer">
-            <span>ACCESS LEVEL: STANDARD</span>
+            <span>ISSUED 2026.03.01 — SOGANG UNIV.</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Flip instruction hint -->
-    <div id="flip-hint">
-      <span>← 스와이프하여 뒤집기 →</span>
+    <!-- Flip hint (hidden, appears after 15s) -->
+    <div id="flip-hint" class="hidden">
+      <div class="flip-hint-inner">
+        <svg class="flip-arrow left" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>카드를 좌우로 넘겨보세요</span>
+        <svg class="flip-arrow right" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M8 4L14 10L8 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
     </div>
   </div>
 

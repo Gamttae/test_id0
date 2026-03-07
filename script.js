@@ -1,5 +1,5 @@
 /* ============================================================
-   3D Interactive Digital ID Card — Main Script
+   3D Interactive Digital ID Card — Endfield Style
    ============================================================ */
 
 (function () {
@@ -11,13 +11,14 @@
     userId: 'honggildong',
     flipRevealStudentId: 2,
     flipRevealUserId: 7,
-    loadingDuration: 4000, // ms
-    particleCount: 70,
+    loadingDuration: 4000,
+    particleCount: 60,
+    hintDelayMs: 15000, // 15 seconds
   };
 
   // ─── State ───
   let flipCount = 0;
-  let isFlipped = false;
+  let currentRotationY = 0;   // continuous rotation tracking
   let studentIdRevealed = false;
   let userIdRevealed = false;
   let tiltX = 0;
@@ -26,6 +27,8 @@
   let touchStartY = 0;
   let isTouching = false;
   let loadingComplete = false;
+  let hintTimer = null;
+  let hintShown = false;
 
   // ─── DOM References ───
   const $overlay = document.getElementById('desktop-overlay');
@@ -70,19 +73,18 @@
   // 2. CLI LOADING SEQUENCE
   // ═══════════════════════════════════════════════════════════
   const terminalLines = [
-    '> Booting ID_VERIFY kernel...',
-    '> Loading biometric modules...',
+    '> Booting ENDFIELD kernel...',
+    '> Loading operator modules...',
     '> Initializing 3D renderer...',
-    '> Connecting to secure database...',
-    '> Fetching user credentials...',
+    '> Connecting to Talos-II database...',
+    '> Fetching operator credentials...',
     '> Decrypting identity payload...',
-    '> Verifying certificate chain...',
-    '> Applying holographic filters...',
+    '> Verifying Originium signature...',
+    '> Applying holographic layer...',
     '> Rendering card surfaces...',
-    '> System ready.',
+    '> System ready. Welcome, Operator.',
   ];
 
-  let loadProgress = 0;
   let lineIndex = 0;
 
   function addTerminalLine(text) {
@@ -94,7 +96,7 @@
   }
 
   function updateProgressBar(pct) {
-    const total = 30;
+    const total = 28;
     const filled = Math.round((pct / 100) * total);
     const empty = total - filled;
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
@@ -110,7 +112,6 @@
       progress++;
       updateProgressBar(progress);
 
-      // Add lines at evenly spaced intervals
       const lineThreshold = Math.floor((progress / 100) * steps);
       while (lineIndex < lineThreshold && lineIndex < steps) {
         addTerminalLine(terminalLines[lineIndex]);
@@ -119,7 +120,6 @@
 
       if (progress >= 100) {
         clearInterval(timer);
-        // Add final line
         while (lineIndex < steps) {
           addTerminalLine(terminalLines[lineIndex]);
           lineIndex++;
@@ -135,8 +135,9 @@
             startScrambleAnimation();
             startBarcode();
             startHUDClock();
-          }, 800);
-        }, 400);
+            startHintTimer();
+          }, 900);
+        }, 500);
       }
     }, interval);
   }
@@ -144,7 +145,33 @@
   runLoading();
 
   // ═══════════════════════════════════════════════════════════
-  // 3. DYNAMIC BACKGROUND (Particles + Grid)
+  // HINT TIMER — show after 15s of no flip
+  // ═══════════════════════════════════════════════════════════
+  function startHintTimer() {
+    hintTimer = setTimeout(() => {
+      if (flipCount === 0 && !hintShown) {
+        showHint();
+      }
+    }, CONFIG.hintDelayMs);
+  }
+
+  function showHint() {
+    hintShown = true;
+    $flipHint.classList.remove('hidden');
+    $flipHint.classList.add('visible');
+  }
+
+  function hideHint() {
+    $flipHint.classList.remove('visible');
+    $flipHint.classList.add('hidden');
+    if (hintTimer) {
+      clearTimeout(hintTimer);
+      hintTimer = null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 3. DYNAMIC BACKGROUND — warm amber particles
   // ═══════════════════════════════════════════════════════════
   const bgCtx = $bgCanvas.getContext('2d');
   let particles = [];
@@ -161,10 +188,12 @@
       particles.push({
         x: Math.random() * $bgCanvas.width,
         y: Math.random() * $bgCanvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: Math.random() * 1.5 + 0.5,
-        alpha: Math.random() * 0.5 + 0.1,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.2 - 0.05, // slight upward drift (dusty)
+        r: Math.random() * 1.5 + 0.3,
+        alpha: Math.random() * 0.4 + 0.05,
+        // warm color variation
+        hue: 35 + Math.random() * 15, // 35-50 range (amber)
       });
     }
   }
@@ -172,18 +201,18 @@
   function drawParticles() {
     bgCtx.clearRect(0, 0, $bgCanvas.width, $bgCanvas.height);
 
-    // Draw connecting lines
+    // Connecting lines — warm tone
     for (let i = 0; i < particles.length; i++) {
       for (let j = i + 1; j < particles.length; j++) {
         const dx = particles[i].x - particles[j].x;
         const dy = particles[i].y - particles[j].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
+        if (dist < 100) {
           bgCtx.beginPath();
           bgCtx.moveTo(particles[i].x, particles[i].y);
           bgCtx.lineTo(particles[j].x, particles[j].y);
-          bgCtx.strokeStyle = `rgba(0, 229, 255, ${0.06 * (1 - dist / 120)})`;
-          bgCtx.lineWidth = 0.5;
+          bgCtx.strokeStyle = `rgba(212, 168, 83, ${0.04 * (1 - dist / 100)})`;
+          bgCtx.lineWidth = 0.4;
           bgCtx.stroke();
         }
       }
@@ -194,7 +223,6 @@
       p.x += p.vx;
       p.y += p.vy;
 
-      // Wrap around
       if (p.x < 0) p.x = $bgCanvas.width;
       if (p.x > $bgCanvas.width) p.x = 0;
       if (p.y < 0) p.y = $bgCanvas.height;
@@ -202,15 +230,15 @@
 
       bgCtx.beginPath();
       bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      bgCtx.fillStyle = `rgba(0, 229, 255, ${p.alpha})`;
+      bgCtx.fillStyle = `hsla(${p.hue}, 60%, 55%, ${p.alpha})`;
       bgCtx.fill();
     }
 
-    // Occasional HUD flicker elements
-    if (Math.random() < 0.005) {
+    // Occasional dust streak
+    if (Math.random() < 0.004) {
       const fy = Math.random() * $bgCanvas.height;
-      bgCtx.fillStyle = 'rgba(0, 229, 255, 0.03)';
-      bgCtx.fillRect(0, fy, $bgCanvas.width, 1 + Math.random() * 3);
+      bgCtx.fillStyle = 'rgba(212, 168, 83, 0.015)';
+      bgCtx.fillRect(0, fy, $bgCanvas.width, 1 + Math.random() * 2);
     }
 
     bgAnimId = requestAnimationFrame(drawParticles);
@@ -228,18 +256,25 @@
   });
 
   // ═══════════════════════════════════════════════════════════
-  // 4. 3D CARD INTERACTION
+  // 4. 3D CARD INTERACTION — directional flip
   // ═══════════════════════════════════════════════════════════
-  // Disable float animation when user touches to apply tilt directly
   function setCardTransform(rx, ry) {
     $card.style.animation = 'none';
     $card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`;
   }
 
   function resetCardFloat() {
+    $card.style.transition = '';
     $card.style.animation = '';
-    $card.style.setProperty('--ry', isFlipped ? '180deg' : '0deg');
+    $card.style.setProperty('--ry', currentRotationY + 'deg');
     $card.style.transform = '';
+  }
+
+  // Determine which face is showing (front = even 180 multiples)
+  function isFrontFacing() {
+    // Normalize rotation to 0-360
+    const norm = ((currentRotationY % 360) + 360) % 360;
+    return norm < 90 || norm > 270;
   }
 
   // Touch Events
@@ -257,17 +292,13 @@
     const dx = t.clientX - touchStartX;
     const dy = t.clientY - touchStartY;
 
-    // Parallax tilt
-    const maxTilt = 18;
+    const maxTilt = 15;
     tiltX = -(dy / window.innerHeight) * maxTilt * 2;
     tiltY = (dx / window.innerWidth) * maxTilt * 2;
-
-    // Clamp
     tiltX = Math.max(-maxTilt, Math.min(maxTilt, tiltX));
     tiltY = Math.max(-maxTilt, Math.min(maxTilt, tiltY));
 
-    const baseRY = isFlipped ? 180 : 0;
-    setCardTransform(tiltX, baseRY + tiltY);
+    setCardTransform(tiltX, currentRotationY + tiltY);
   }, { passive: true });
 
   document.addEventListener('touchend', (e) => {
@@ -279,16 +310,21 @@
     const absDx = Math.abs(dx);
     const absDy = Math.abs(t.clientY - touchStartY);
 
-    // Detect horizontal swipe (more X than Y, over 50px)
+    // Swipe detection: horizontal > 50px and more X than Y
     if (absDx > 50 && absDx > absDy * 1.2) {
-      flipCard();
+      if (dx > 0) {
+        // Swipe RIGHT → card rotates clockwise (positive Y)
+        flipCard(180);
+      } else {
+        // Swipe LEFT → card rotates counter-clockwise (negative Y)
+        flipCard(-180);
+      }
     } else {
-      // Reset to floating
       resetCardFloat();
     }
   }, { passive: true });
 
-  // Mouse fallback (for testing on desktop)
+  // Mouse fallback
   let mouseDown = false;
   let mouseStartX = 0;
   document.addEventListener('mousedown', (e) => {
@@ -300,32 +336,30 @@
     if (!loadingComplete || !mouseDown) return;
     mouseDown = false;
     const dx = e.clientX - mouseStartX;
-    if (Math.abs(dx) > 50) flipCard();
+    if (Math.abs(dx) > 50) {
+      flipCard(dx > 0 ? 180 : -180);
+    }
   });
 
-  function flipCard() {
-    isFlipped = !isFlipped;
+  function flipCard(direction) {
+    currentRotationY += direction;
     flipCount++;
     $hudFlipCount.textContent = flipCount;
 
-    // Apply flip
+    // Animate flip
     $card.style.animation = 'none';
     $card.style.transition = 'transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1)';
-    $card.style.transform = `rotateY(${isFlipped ? 180 : 0}deg)`;
+    $card.style.transform = `rotateY(${currentRotationY}deg)`;
 
-    // After transition, restore float
     setTimeout(() => {
-      $card.style.transition = '';
       resetCardFloat();
     }, 750);
 
-    // Check reveal conditions
     checkReveal();
 
-    // Hide hint after first flip
-    if (flipCount >= 1) {
-      $flipHint.style.opacity = '0';
-      setTimeout(() => { $flipHint.style.display = 'none'; }, 500);
+    // Hide hint on first flip
+    if (flipCount >= 1 && (hintShown || !hintShown)) {
+      hideHint();
     }
   }
 
@@ -336,33 +370,33 @@
   let photoGlitchId;
 
   function generateBasePhoto() {
-    // Procedural "person silhouette" placeholder
     const w = $photoCanvas.width;
     const h = $photoCanvas.height;
 
-    // Dark background
-    photoCtx.fillStyle = '#0d0d1a';
+    // Warm dark background
+    photoCtx.fillStyle = '#12100d';
     photoCtx.fillRect(0, 0, w, h);
 
     // Head circle
     photoCtx.beginPath();
-    photoCtx.arc(w / 2, h * 0.32, 22, 0, Math.PI * 2);
-    photoCtx.fillStyle = '#1a2a3a';
+    photoCtx.arc(w / 2, h * 0.3, 20, 0, Math.PI * 2);
+    photoCtx.fillStyle = '#2a2318';
     photoCtx.fill();
 
-    // Body
+    // Shoulders/body
     photoCtx.beginPath();
-    photoCtx.ellipse(w / 2, h * 0.72, 30, 40, 0, 0, Math.PI * 2);
-    photoCtx.fillStyle = '#1a2a3a';
+    photoCtx.moveTo(w / 2 - 32, h * 0.52);
+    photoCtx.quadraticCurveTo(w / 2, h * 0.45, w / 2 + 32, h * 0.52);
+    photoCtx.lineTo(w / 2 + 38, h * 0.85);
+    photoCtx.quadraticCurveTo(w / 2, h * 0.9, w / 2 - 38, h * 0.85);
+    photoCtx.closePath();
+    photoCtx.fillStyle = '#2a2318';
     photoCtx.fill();
 
-    // Shoulder line
+    // Subtle face features
     photoCtx.beginPath();
-    photoCtx.moveTo(w / 2 - 35, h * 0.55);
-    photoCtx.quadraticCurveTo(w / 2, h * 0.48, w / 2 + 35, h * 0.55);
-    photoCtx.lineTo(w / 2 + 35, h * 0.65);
-    photoCtx.quadraticCurveTo(w / 2, h * 0.58, w / 2 - 35, h * 0.65);
-    photoCtx.fillStyle = '#1a2a3a';
+    photoCtx.arc(w / 2, h * 0.32, 13, 0, Math.PI * 2);
+    photoCtx.fillStyle = '#332b1f';
     photoCtx.fill();
   }
 
@@ -370,16 +404,15 @@
     const w = $photoCanvas.width;
     const h = $photoCanvas.height;
 
-    // Get current image data
     const imageData = photoCtx.getImageData(0, 0, w, h);
     const data = imageData.data;
 
     // Random horizontal slice shift
-    const numSlices = 2 + Math.floor(Math.random() * 4);
+    const numSlices = 2 + Math.floor(Math.random() * 3);
     for (let s = 0; s < numSlices; s++) {
       const sliceY = Math.floor(Math.random() * h);
-      const sliceH = 1 + Math.floor(Math.random() * 6);
-      const offset = Math.floor((Math.random() - 0.5) * 20) * 4;
+      const sliceH = 1 + Math.floor(Math.random() * 5);
+      const offset = Math.floor((Math.random() - 0.5) * 16) * 4;
 
       for (let y = sliceY; y < Math.min(sliceY + sliceH, h); y++) {
         for (let x = 0; x < w; x++) {
@@ -395,39 +428,46 @@
       }
     }
 
-    // RGB channel split on random rows
+    // RGB channel split — warm bias
     if (Math.random() < 0.3) {
       const ry = Math.floor(Math.random() * h);
-      const rh = 2 + Math.floor(Math.random() * 8);
+      const rh = 2 + Math.floor(Math.random() * 6);
       for (let y = ry; y < Math.min(ry + rh, h); y++) {
         for (let x = 0; x < w - 3; x++) {
           const idx = (y * w + x) * 4;
-          data[idx] = data[idx + 8] || data[idx];     // shift red
-          data[idx + 2] = data[idx - 8] || data[idx + 2]; // shift blue
+          data[idx] = Math.min(255, (data[idx + 8] || data[idx]) + 15); // warm red shift
+          data[idx + 2] = Math.max(0, (data[idx - 8] || data[idx + 2]) - 10);
         }
       }
     }
 
-    // Add noise pixels
-    for (let i = 0; i < 80; i++) {
+    // Noise pixels — warm tones
+    for (let i = 0; i < 60; i++) {
       const px = Math.floor(Math.random() * w);
       const py = Math.floor(Math.random() * h);
       const idx = (py * w + px) * 4;
-      const v = Math.random() < 0.5 ? 0 : 200 + Math.floor(Math.random() * 55);
-      data[idx] = v;
-      data[idx + 1] = v;
-      data[idx + 2] = v + (Math.random() < 0.3 ? 80 : 0);
+      if (Math.random() < 0.5) {
+        // Amber noise
+        data[idx] = 160 + Math.floor(Math.random() * 60);
+        data[idx + 1] = 120 + Math.floor(Math.random() * 40);
+        data[idx + 2] = 40 + Math.floor(Math.random() * 30);
+      } else {
+        const v = Math.random() < 0.5 ? 0 : 40 + Math.floor(Math.random() * 30);
+        data[idx] = v;
+        data[idx + 1] = v;
+        data[idx + 2] = v;
+      }
     }
 
-    // Occasional cyan tint band
+    // Occasional warm tint band
     if (Math.random() < 0.2) {
       const by = Math.floor(Math.random() * h);
-      const bh = 1 + Math.floor(Math.random() * 4);
+      const bh = 1 + Math.floor(Math.random() * 3);
       for (let y = by; y < Math.min(by + bh, h); y++) {
         for (let x = 0; x < w; x++) {
           const idx = (y * w + x) * 4;
-          data[idx + 1] = Math.min(255, data[idx + 1] + 40);
-          data[idx + 2] = Math.min(255, data[idx + 2] + 60);
+          data[idx] = Math.min(255, data[idx] + 25);     // red
+          data[idx + 1] = Math.min(255, data[idx + 1] + 15); // green
         }
       }
     }
@@ -440,7 +480,7 @@
     let frame = 0;
     function glitchLoop() {
       frame++;
-      if (frame % 4 === 0) { // Every ~4 frames
+      if (frame % 5 === 0) {
         generateBasePhoto();
         applyGlitch();
       }
@@ -452,7 +492,7 @@
   // ═══════════════════════════════════════════════════════════
   // 6. BACK FACE — TEXT SCRAMBLE & REVEAL
   // ═══════════════════════════════════════════════════════════
-  const scrambleChars = '!@#$%^&*()_+-=[]{}|;:,.<>?0123456789ABCDEF';
+  const scrambleChars = '!@#$%^&*()_+-={}|<>?0123456789ABCDEF';
   let scrambleAnimId;
 
   function randomScramble(length) {
@@ -484,7 +524,6 @@
     let idx = 0;
     const chars = text.split('');
     const interval = setInterval(() => {
-      // Build string: revealed chars + scrambled remaining
       let display = '';
       for (let i = 0; i < chars.length; i++) {
         if (i <= idx) {
@@ -500,33 +539,29 @@
         if (callback) callback();
       }
       idx++;
-    }, 60);
+    }, 65);
   }
 
   function checkReveal() {
     if (!studentIdRevealed && flipCount >= CONFIG.flipRevealStudentId) {
       studentIdRevealed = true;
-      setTimeout(() => {
-        typeReveal($studentIdDisplay, CONFIG.studentId);
-      }, 300);
+      setTimeout(() => typeReveal($studentIdDisplay, CONFIG.studentId), 400);
     }
     if (!userIdRevealed && flipCount >= CONFIG.flipRevealUserId) {
       userIdRevealed = true;
-      setTimeout(() => {
-        typeReveal($userIdDisplay, CONFIG.userId);
-      }, 300);
+      setTimeout(() => typeReveal($userIdDisplay, CONFIG.userId), 400);
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // BARCODE CANVAS
+  // BARCODE CANVAS — warm tone
   // ═══════════════════════════════════════════════════════════
   function startBarcode() {
     const ctx = $barcodeCanvas.getContext('2d');
     const w = $barcodeCanvas.width;
     const h = $barcodeCanvas.height;
 
-    ctx.fillStyle = '#0a0a14';
+    ctx.fillStyle = '#0e0d0b';
     ctx.fillRect(0, 0, w, h);
 
     let x = 4;
@@ -534,8 +569,9 @@
       const barW = 1 + Math.floor(Math.random() * 3);
       const isFilled = Math.random() > 0.35;
       if (isFilled) {
-        ctx.fillStyle = `rgba(0, 229, 255, ${0.3 + Math.random() * 0.4})`;
-        ctx.fillRect(x, 4, barW, h - 8);
+        const alpha = 0.2 + Math.random() * 0.35;
+        ctx.fillStyle = `rgba(212, 168, 83, ${alpha})`;
+        ctx.fillRect(x, 3, barW, h - 6);
       }
       x += barW + 1;
     }
