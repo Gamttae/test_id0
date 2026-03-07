@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Digital ID Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Desktop / Tablet Overlay -->
+  <div id="desktop-overlay">
+    <div class="overlay-content">
+      <div class="overlay-icon">⚠</div>
+      <h2>스마트폰으로 봐주세요</h2>
+      <p>이 콘텐츠는 모바일 세로 모드에 최적화되어 있습니다.</p>
+      <div class="overlay-device-icon">
+        <svg width="48" height="80" viewBox="0 0 48 80" fill="none">
+          <rect x="2" y="2" width="44" height="76" rx="8" stroke="#fff" stroke-width="2" fill="none"/>
+          <circle cx="24" cy="70" r="4" stroke="#fff" stroke-width="1.5" fill="none"/>
+          <line x1="16" y1="8" x2="32" y2="8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Screen (CLI Style) -->
+  <div id="loading-screen">
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dot"></span>
+        <span class="terminal-dot"></span>
+        <span class="terminal-dot"></span>
+        <span class="terminal-title">sys://init_idcard.sh</span>
+      </div>
+      <div class="terminal-body" id="terminal-body">
+        <!-- Lines will be appended by JS -->
+      </div>
+      <div class="progress-container">
+        <span id="progress-bar">[----------] 0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Scene -->
+  <div id="scene">
+    <!-- Background Canvas for particles -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- CSS Grid overlay -->
+    <div id="grid-overlay"></div>
+
+    <!-- HUD Elements -->
+    <div class="hud hud-top-left">
+      <span>SYS::ONLINE</span>
+      <span class="hud-blink">●</span>
+    </div>
+    <div class="hud hud-top-right">
+      <span id="hud-time">00:00:00</span>
+    </div>
+    <div class="hud hud-bottom-left">
+      <span>ID_VERIFY v3.7.1</span>
+    </div>
+    <div class="hud hud-bottom-right">
+      <span>FLIP: <span id="hud-flip-count">0</span></span>
+    </div>
+
+    <!-- 3D Card Container -->
+    <div id="card-container">
+      <div id="card">
+        <!-- Front Face -->
+        <div class="card-face card-front">
+          <div class="card-header">
+            <div class="card-badge">DIGITAL ID</div>
+            <div class="card-chip">
+              <svg width="36" height="28" viewBox="0 0 36 28">
+                <rect x="1" y="1" width="34" height="26" rx="4" fill="#c8a846" stroke="#a08020" stroke-width="1"/>
+                <line x1="1" y1="14" x2="35" y2="14" stroke="#a08020" stroke-width="0.5"/>
+                <line x1="18" y1="1" x2="18" y2="27" stroke="#a08020" stroke-width="0.5"/>
+                <line x1="8" y1="7" x2="28" y2="7" stroke="#a08020" stroke-width="0.5"/>
+                <line x1="8" y1="21" x2="28" y2="21" stroke="#a08020" stroke-width="0.5"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card-photo-area">
+            <canvas id="photo-canvas" width="120" height="150"></canvas>
+            <div class="photo-scanline"></div>
+          </div>
+          <div class="card-info-front">
+            <div class="card-label">NAME</div>
+            <div class="card-name">홍길동</div>
+            <div class="card-label">DEPARTMENT</div>
+            <div class="card-department">컴퓨터공학과</div>
+          </div>
+          <div class="card-front-bottom-line"></div>
+        </div>
+
+        <!-- Back Face -->
+        <div class="card-face card-back">
+          <div class="card-back-header">
+            <div class="card-logo">
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r="28" fill="none" stroke="#00e5ff" stroke-width="1.5"/>
+                <circle cx="30" cy="30" r="20" fill="none" stroke="#00e5ff" stroke-width="0.8"/>
+                <polygon points="30,10 38,25 30,20 22,25" fill="#00e5ff" opacity="0.8"/>
+                <polygon points="30,50 38,35 30,40 22,35" fill="#00e5ff" opacity="0.8"/>
+                <text x="30" y="33" text-anchor="middle" fill="#00e5ff" font-size="8" font-family="Rajdhani, sans-serif" font-weight="700">UNIV</text>
+              </svg>
+            </div>
+            <div class="card-back-title">STUDENT CREDENTIALS</div>
+          </div>
+          <div class="card-info-back">
+            <div class="info-row">
+              <div class="card-label">STUDENT ID</div>
+              <div class="card-value" id="student-id-display">██████████</div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">USER ID</div>
+              <div class="card-value" id="user-id-display">██████████</div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">ISSUED</div>
+              <div class="card-value">2026.03.01</div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">STATUS</div>
+              <div class="card-value card-status-active">
+                <span class="status-dot"></span> ACTIVE
+              </div>
+            </div>
+          </div>
+          <div class="card-barcode">
+            <canvas id="barcode-canvas" width="200" height="40"></canvas>
+          </div>
+          <div class="card-back-footer">
+            <span>ACCESS LEVEL: STANDARD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flip instruction hint -->
+    <div id="flip-hint">
+      <span>← 스와이프하여 뒤집기 →</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
