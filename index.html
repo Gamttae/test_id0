@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Digital ID Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 발표기간 안내 배너 -->
+  <div id="notice-banner" style="position:fixed;top:0;left:0;right:0;z-index:10000;background:rgba(0,0,0,0.85);color:#fff;text-align:center;padding:10px 16px;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:500;letter-spacing:1px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+    ⚠ 현재 발표기간이 아닙니다
+  </div>
+
+  <!-- Desktop / Tablet Overlay -->
+  <div id="desktop-overlay">
+    <div class="overlay-content">
+      <div class="overlay-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="4" y="4" width="32" height="32" rx="2" stroke="#999" stroke-width="1.5" fill="none"/>
+          <line x1="20" y1="12" x2="20" y2="24" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="28" r="1.5" fill="#999"/>
+        </svg>
+      </div>
+      <h2>모바일 환경에서 열어주세요</h2>
+      <p>이 콘텐츠는 스마트폰 세로 화면에<br>최적화되어 있습니다.</p>
+      <div class="overlay-device-icon">
+        <svg width="36" height="64" viewBox="0 0 36 64" fill="none">
+          <rect x="2" y="2" width="32" height="60" rx="6" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none"/>
+          <line x1="12" y1="6" x2="24" y2="6" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-linecap="round"/>
+          <circle cx="18" cy="56" r="3" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Screen (CLI Style) -->
+  <div id="loading-screen">
+    <!-- Corner brackets on loading screen (TL + BR only) -->
+    <div class="loading-bracket lb-tl"></div>
+    <div class="loading-bracket lb-br"></div>
+    <div class="terminal">
+      <div class="terminal-header"></div>
+      <div class="terminal-body" id="terminal-body"></div>
+      <div class="progress-container">
+        <span id="progress-bar">[----------] 0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bracket transition overlay (sits above loading, below main scene) -->
+  <div id="bracket-transition" style="display:none;">
+    <div class="trans-bracket trans-tl"></div>
+    <div class="trans-bracket trans-br"></div>
+  </div>
+
+  <!-- Main Scene -->
+  <div id="scene">
+    <canvas id="bg-canvas"></canvas>
+    <div id="grid-overlay"></div>
+
+    <!-- Google Test Site style decorations -->
+    <div class="geo-deco">
+      <!-- Cross markers -->
+      <div class="cross" style="top: 10%; left: 10%;"></div>
+      <div class="cross" style="top: 10%; right: 10%;"></div>
+      <div class="cross" style="bottom: 15%; left: 15%;"></div>
+      <div class="cross" style="bottom: 10%; right: 10%;"></div>
+
+      <!-- Tech texts -->
+      <div class="tech-text" style="top: 20%; left: 5%;">SYS_OP_1.0</div>
+      <div class="tech-text" style="bottom: 5%; right: 5%;">ID PROTOCOL</div>
+
+      <!-- Yellow stripes -->
+      <div class="yellow-stripe"></div>
+      <div class="yellow-stripe-vertical"></div>
+
+      <!-- Horizontal scan lines -->
+      <div class="h-line h-line-1"></div>
+      <div class="h-line h-line-2"></div>
+      <div class="h-line h-line-3"></div>
+
+      <!-- Diamond shapes -->
+      <div class="diamond diamond-1"></div>
+      <div class="diamond diamond-2"></div>
+      <div class="diamond diamond-3"></div>
+
+      <!-- Corner brackets -->
+      <div class="bracket bracket-tl"></div>
+      <div class="bracket bracket-br"></div>
+
+      <!-- Thin vertical accent lines -->
+      <div class="v-accent v-accent-l"></div>
+      <div class="v-accent v-accent-r"></div>
+    </div>
+
+    <!-- Ambient light rays -->
+    <div class="ambient-ray ray-1"></div>
+    <div class="ambient-ray ray-2"></div>
+    <div class="ambient-ray ray-3"></div>
+
+    <!-- HUD Elements -->
+    <div class="hud hud-top-left">
+      <span class="hud-tag">SYS</span>
+      <span>ONLINE</span>
+      <span class="hud-blink">●</span>
+    </div>
+    <div class="hud hud-top-right">
+      <span id="hud-time">00:00:00</span>
+    </div>
+    <div class="hud hud-bottom-left">
+      <span class="hud-tag">VERIFY</span>
+      <span>ID v3.7</span>
+    </div>
+    <div class="hud hud-bottom-right">
+      <span>FLIP <span id="hud-flip-count">0</span></span>
+    </div>
+
+    <!-- 3D Card Container -->
+    <div id="card-container">
+      <div id="card" class="floating">
+        <!-- ===== Front Face ===== -->
+        <div class="card-face card-front">
+          <div class="card-accent-top"></div>
+          <div class="card-header">
+            <div class="card-badge">STUDENT ID</div>
+            <div class="card-chip">
+              <svg width="32" height="24" viewBox="0 0 32 24">
+                <rect x="1" y="1" width="30" height="22" rx="3" fill="#bbb" stroke="#999" stroke-width="0.8"/>
+                <line x1="1" y1="12" x2="31" y2="12" stroke="#999" stroke-width="0.4"/>
+                <line x1="16" y1="1" x2="16" y2="23" stroke="#999" stroke-width="0.4"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card-body-front">
+            <div class="card-photo-area">
+              <canvas id="photo-canvas" width="110" height="140"></canvas>
+              <div class="photo-scanline"></div>
+              <div class="photo-corner tl"></div>
+              <div class="photo-corner tr"></div>
+              <div class="photo-corner bl"></div>
+              <div class="photo-corner br"></div>
+            </div>
+            <div class="card-info-front">
+              <div class="card-label">NAME</div>
+              <div class="card-name" style="filter:blur(5px);-webkit-filter:blur(5px);user-select:none;">■■■</div>
+              <div class="card-label">DEPT</div>
+              <div class="card-department" style="filter:blur(5px);-webkit-filter:blur(5px);user-select:none;">■■■■■■■■■</div>
+              <div class="card-label">ABOUT</div>
+              <div class="card-about">AI를 사용하는 것만으로는 부족했기에,<br>직접 설계하고 구현하는<br>개발자가 되고 싶습니다.</div>
+            </div>
+          </div>
+          <div class="card-front-footer">
+            <div class="barcode-front"></div>
+            <span>CLASSIFIED</span>
+          </div>
+        </div>
+
+        <!-- ===== Back Face ===== -->
+        <div class="card-face card-back">
+          <div class="card-accent-top"></div>
+          <div class="card-back-header">
+            <div class="card-logo">
+              <div class="logo-wrapper">
+                <div class="logo-ring"></div>
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcScv_gYqo7y_Zt8wsQbzBOgRQ8vLs-aBIPzAQ&s" alt="서강대학교" class="sogang-logo" crossorigin="anonymous">
+              </div>
+            </div>
+            <div class="card-back-title">서강대학교</div>
+            <div class="card-back-subtitle">SOGANG UNIVERSITY</div>
+          </div>
+          <div class="card-info-back">
+            <div class="info-row">
+              <div class="card-label">STUDENT ID</div>
+              <div class="card-value" id="student-id-display" style="filter:blur(5px);-webkit-filter:blur(5px);user-select:none;">██████████</div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">USER ID</div>
+              <div class="user-id-row">
+                <img src="https://i.namu.wiki/i/PpCUHjc8PoAlAWoSip-m3KtgYMq7Ft1sI2BiCioMrclYCFdnjCEVKdPyXJ3yqXgHjgboqOp-8Q9z71WTisQy_A.svg" alt="Instagram" class="insta-icon" id="insta-icon" style="display:none;">
+                <span class="card-value" id="user-id-display">██████████</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">GOAL</div>
+              <div class="card-goal">AI의 원리를 깊이 이해하고,<br>직접 설계·개발할 수 있는<br>토대를 만들어 가기.</div>
+            </div>
+            <div class="info-row">
+              <div class="card-label">STATUS</div>
+              <div class="card-value card-status-active">
+                <span class="status-dot"></span> ENROLLED
+              </div>
+            </div>
+          </div>
+          <div class="card-barcode">
+            <canvas id="barcode-canvas" width="200" height="32"></canvas>
+          </div>
+          <div class="card-back-footer">
+            <span>ISSUED 2026.03.09 — SOGANG UNIV.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flip hint -->
+    <div id="flip-hint" class="hidden">
+      <div class="flip-hint-inner">
+        <svg class="flip-arrow left" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>카드를 좌우로 넘겨보세요</span>
+        <svg class="flip-arrow right" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M8 4L14 10L8 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
